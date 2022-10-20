@@ -101,7 +101,7 @@ def train(model, train_data, val_data, learning_rate, epochs, batch_size, tokeni
 
 
 if __name__ == "__main__":
-    EPOCHS = 15
+    EPOCHS = 20
     # model = BertClassifier()
     model = RobertaClassifier()
     LR = 1e-5

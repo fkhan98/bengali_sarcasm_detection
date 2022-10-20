@@ -1,26 +1,47 @@
 import torch
+import torch.nn as nn
 import pandas as pd
 import numpy as np
 
-from model import BertClassifier
-from transformers import BertTokenizer
+from sklearn.metrics import f1_score 
+from model import BertClassifier, RobertaClassifier
+from dataset import Dataset
+from transformers import BertTokenizer, RobertaTokenizer
 
-def infer(model, test_df, tokenizer):
-    model.eval() 
-    ## load the sentences in the test_df i.e test_df['headlines']
-    ## write a loop that loops over all the sentences 
-    ## inside the loop tokenizes the senteces
-    ## the output of the tokenizer contains 'input_ids' and 'attention_mask'
-    ## 'input_ids' and 'attention_mask' are needed as input to the model to make inference
-    ## see line 58-70 of train.py to understand how input is provided to the model
-    ## dont forget to with torch.no_grad() before inference loop
-    pass
+def infer(classifier, test_df, tokenizer):
+    headlines = [tokenizer(text, 
+                               padding='max_length', max_length = 512, truncation=True,
+                                return_tensors="pt") for text in test_df['headlines']]
+
+    preds = []
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
+    classifier.eval() 
+    
+    with torch.no_grad():
+
+        for headline in headlines:
+            mask = headline['attention_mask'].to(device)
+            input_id = headline['input_ids'].squeeze(1).to(device)
+            classifier = classifier.to(device)
+
+            output = classifier(input_id, mask)
+            preds.append(output.argmax(dim=1).cpu().numpy()[0])
+
+    test_df['category']=preds
+    test_df.drop(columns = ['headlines'], inplace = True)
+    test_df.to_csv('test_prediction.csv',index=False)
+    
 
 
 if __name__ == "__main__":
     
-    classifier = BertClassifier()
-    classifier.load_state_dict(torch.load('./saved_model/best_model.pt')) ##provide path to model
-    tokenizer = BertTokenizer.from_pretrained('sagorsarker/bangla-bert-base') ## tokenizer for BERT
+    # classifier = BertClassifier()
+    # classifier.load_state_dict(torch.load('./saved_model/best_model.pt')) ##provide path to model
+    # tokenizer = BertTokenizer.from_pretrained('sagorsarker/bangla-bert-base') ## tokenizer for BERT
+    classifier = RobertaClassifier()
+    classifier.load_state_dict(torch.load('./saved_model/roberta_model.pt'))
+    tokenizer = RobertaTokenizer.from_pretrained('neuralspace-reverie/indic-transformers-bn-roberta')
     
     test_df = pd.read_csv('./test.csv') ##provide path to test.csv
+    infer(classifier,test_df,tokenizer)
