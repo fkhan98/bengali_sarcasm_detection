@@ -5,13 +5,19 @@ import pandas as pd
 import sys
 import os
 
+from transformers import BertTokenizer, RobertaTokenizer
 from tqdm import tqdm
 from dataset import Dataset
-from model import BertClassifier
+from model import BertClassifier, RobertaClassifier
 
-def train(model, train_data, val_data, learning_rate, epochs, batch_size):
+def train(model, train_data, val_data, learning_rate, epochs, batch_size, tokenizer_type = 'roberta'):
+    
+    if tokenizer_type == 'roberta':
+        tokenizer = RobertaTokenizer.from_pretrained('neuralspace-reverie/indic-transformers-bn-roberta')
+    else:
+        tokenizer = BertTokenizer.from_pretrained('sagorsarker/bangla-bert-base')
 
-    train, val = Dataset(train_data), Dataset(val_data)
+    train, val = Dataset(train_data, tokenizer), Dataset(val_data, tokenizer)
 
     train_dataloader = torch.utils.data.DataLoader(train, batch_size=batch_size, shuffle=True)
     val_dataloader = torch.utils.data.DataLoader(val, batch_size=batch_size)
@@ -73,7 +79,7 @@ def train(model, train_data, val_data, learning_rate, epochs, batch_size):
                     total_acc_val += acc
                
                 path = './saved_model'
-                save_path = os.path.join(path,'best_model.pt')
+                save_path = os.path.join(path,'roberta_model.pt')
                 
                 isExist = os.path.exists(path)
                 if not isExist:
@@ -96,14 +102,15 @@ def train(model, train_data, val_data, learning_rate, epochs, batch_size):
 
 if __name__ == "__main__":
     EPOCHS = 15
-    model = BertClassifier()
+    # model = BertClassifier()
+    model = RobertaClassifier()
     LR = 1e-5
     batch_size = 32
 
     df_train = pd.read_csv('./train.csv') 
     df_val = pd.read_csv('./val.csv') 
         
-    train(model, df_train, df_val, LR, EPOCHS, batch_size)
+    train(model, df_train, df_val, LR, EPOCHS, batch_size, tokenizer_type='roberta')
     ##saving tokenizer
     # tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
     # tokenizer.save_pretrained("./saved_model")

@@ -2,13 +2,10 @@ import torch
 import pandas as pd
 import numpy as np
 
-from transformers import BertTokenizer
-
-tokenizer = BertTokenizer.from_pretrained('sagorsarker/bangla-bert-base')
 
 class Dataset(torch.utils.data.Dataset):
 
-    def __init__(self, df):
+    def __init__(self, df, tokenizer):
 
         self.labels = [label for label in df['category']]
         self.headline = [tokenizer(text, 
